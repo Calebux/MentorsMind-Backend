@@ -47,12 +47,12 @@ export const isBookingInFuture = (scheduledAt: Date, bufferMinutes: number = 30)
 export const isWithinBusinessHours = (scheduledAt: Date): boolean => {
   const hour = scheduledAt.getHours();
   const day = scheduledAt.getDay();
-  
+
   // Weekend check (0 = Sunday, 6 = Saturday)
   if (day === 0 || day === 6) {
     return false;
   }
-  
+
   // Business hours: 8 AM to 8 PM
   return hour >= 8 && hour < 20;
 };
@@ -66,7 +66,7 @@ export const formatConflictMessage = (existingBooking: {
 }): string => {
   const start = new Date(existingBooking.scheduled_at);
   const end = calculateEndTime(start, existingBooking.duration_minutes);
-  
+
   return `Mentor has an existing booking from ${start.toISOString()} to ${end.toISOString()}`;
 };
 
@@ -86,7 +86,7 @@ export const calculateRefundEligibility = (scheduledAt: Date, cancelledAt: Date 
   reason: string;
 } => {
   const hoursUntilSession = (scheduledAt.getTime() - cancelledAt.getTime()) / (1000 * 60 * 60);
-  
+
   if (hoursUntilSession >= 24) {
     return {
       eligible: true,
