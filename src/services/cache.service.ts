@@ -1,3 +1,4 @@
+import { trace, SpanStatusCode } from "@opentelemetry/api";
 import { logger } from '../utils/logger.utils';
 import { redisConfig } from '../config/redis.config';
 
@@ -110,6 +111,42 @@ function track(event: keyof CacheMetrics, key: string): void {
   }
 }
 
+// ─── OpenTelemetry Span Helper ────────────────────────────────────────────────
+
+/**
+ * Runs a cache backend operation inside an OpenTelemetry span named
+ * `cache.<operation>` so Redis call latency and errors are visible in traces.
+ * Uses @opentelemetry/api directly — when the SDK has not been initialised the
+ * API returns no-op spans, so this stays cheap in test/dev environments.
+ */
+function withCacheSpan<T>(
+  operation: string,
+  key: string | undefined,
+  backend: "redis" | "memory",
+  fn: () => Promise<T>,
+): Promise<T> {
+  const tracer = trace.getTracer("mentorminds");
+  return tracer.startActiveSpan(`cache.${operation}`, async (span) => {
+    span.setAttribute("cache.operation", operation);
+    span.setAttribute("cache.backend", backend);
+    if (key !== undefined) span.setAttribute("cache.key", key);
+    try {
+      const result = await fn();
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (err) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      span.recordException(err instanceof Error ? err : new Error(String(err)));
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
+
 // ─── Public Service ───────────────────────────────────────────────────────────
 
 export class CacheService {
@@ -117,7 +154,9 @@ export class CacheService {
   static async get<T>(key: string): Promise<T | null> {
     try {
       const client = await getClient();
-      const raw = client ? await client.get(key) : memGet(key);
+      const raw = client
+        ? await withCacheSpan("get", key, "redis", () => client.get(key))
+        : memGet(key);
       if (raw === null) {
         track('misses', key);
         return null;
@@ -141,7 +180,9 @@ export class CacheService {
       const serialized = JSON.stringify(value);
       const client = await getClient();
       if (client) {
-        await client.setex(key, ttlSeconds, serialized);
+        await withCacheSpan("set", key, "redis", () =>
+          client.setex(key, ttlSeconds, serialized),
+        );
       } else {
         memSet(key, serialized, ttlSeconds);
       }
@@ -156,8 +197,11 @@ export class CacheService {
   static async del(key: string): Promise<void> {
     try {
       const client = await getClient();
-      if (client) await client.del(key);
-      else memDel(key);
+      if (client) {
+        await withCacheSpan("del", key, "redis", () => client.del(key));
+      } else {
+        memDel(key);
+      }
       track('deletes', key);
     } catch (err: any) {
       track('errors', key);
@@ -176,9 +220,13 @@ export class CacheService {
       const serialized = JSON.stringify(value);
       const client = await getClient();
       if (client) {
-        await client.lpush(key, serialized);
-        await client.ltrim(key, 0, maxLength - 1);
-        await client.expire(key, ttlSeconds);
+        await withCacheSpan("lpush", key, "redis", () => client.lpush(key, serialized));
+        await withCacheSpan("ltrim", key, "redis", () =>
+          client.ltrim(key, 0, maxLength - 1),
+        );
+        await withCacheSpan("expire", key, "redis", () =>
+          client.expire(key, ttlSeconds),
+        );
       } else {
         const current = JSON.parse(memGet(key) || '[]') as T[];
         current.unshift(value);
@@ -196,7 +244,9 @@ export class CacheService {
     try {
       const client = await getClient();
       const rawItems: string[] = client
-        ? await client.lrange(key, start, stop)
+        ? await withCacheSpan("lrange", key, "redis", () =>
+            client.lrange(key, start, stop),
+          )
         : (JSON.parse(memGet(key) || '[]') as T[])
             .slice(start, stop === -1 ? undefined : stop + 1)
             .map((item) => JSON.stringify(item));
@@ -215,8 +265,12 @@ export class CacheService {
     try {
       const client = await getClient();
       if (client) {
-        const keys: string[] = await client.keys(pattern);
-        if (keys.length) await client.del(...keys);
+        const keys: string[] = await withCacheSpan("keys", pattern, "redis", () =>
+          client.keys(pattern),
+        );
+        if (keys.length) {
+          await withCacheSpan("del", pattern, "redis", () => client.del(...keys));
+        }
       } else {
         for (const key of memKeys(pattern)) memDel(key);
       }
@@ -264,7 +318,7 @@ export class CacheService {
   static async ping(): Promise<void> {
     const client = await getClient();
     if (!client) throw new Error('Redis client unavailable');
-    const pong = await client.ping();
+    const pong = await withCacheSpan("ping", undefined, "redis", () => client.ping());
     if (pong !== 'PONG') throw new Error(`Unexpected ping response: ${pong}`);
   }
 

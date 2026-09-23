@@ -13,6 +13,7 @@ const config = {
   server: {
     port: parseInt(env.PORT, 10),
     apiVersion: env.API_VERSION,
+    timeoutMs: parseInt(env.REQUEST_TIMEOUT_MS, 10),
   },
 
   db: {
