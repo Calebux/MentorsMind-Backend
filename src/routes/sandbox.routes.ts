@@ -12,8 +12,17 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
+const isSandboxEnabled = (): boolean => {
+  return process.env.SANDBOX_MODE === 'true' && process.env.NODE_ENV !== 'production';
+};
+
 router.use((_req: Request, res: Response, next: NextFunction) => {
-  if (process.env.SANDBOX_MODE !== 'true') {
+  if (!isSandboxEnabled()) {
+    logger.warn('Sandbox endpoint accessed but sandbox mode is disabled', {
+      path: _req.path,
+      sandboxMode: process.env.SANDBOX_MODE,
+      nodeEnv: process.env.NODE_ENV,
+    });
     res.status(404).json({
       success: false,
       error: 'Sandbox mode is not enabled on this environment',
