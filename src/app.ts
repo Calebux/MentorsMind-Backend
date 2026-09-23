@@ -33,6 +33,7 @@ import {
 import { logger } from "./utils/logger";
 import { initializeI18n } from "./config/i18n.config";
 import { tenantMiddleware } from "./middleware/tenant.middleware";
+import { requireJsonContentType } from "./middleware/content-type.middleware";
 import {
   memoryDashboardHandler,
   memoryMonitorMiddleware,
@@ -68,6 +69,10 @@ app.use(i18nMiddleware);
 
 // Tenant resolution middleware (resolves tenant from hostname)
 app.use(tenantMiddleware as any);
+
+// Content-Type validation for POST/PUT/PATCH — must run before the body
+// parsers so it can inspect the raw header rather than the parsed body.
+app.use(requireJsonContentType);
 
 // Body parsing
 app.use(express.json({ limit: "10mb" }));

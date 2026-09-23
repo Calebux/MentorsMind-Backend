@@ -10,7 +10,10 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/**/tenant-isolation.test.ts'],
+  testMatch: [
+    '<rootDir>/**/tenant-isolation.test.ts',
+    '<rootDir>/**/tenant-isolation/**/*.test.ts',
+  ],
   setupFilesAfterEnv: ['<rootDir>/../../jest.setup.ts'],
   collectCoverage: false,
   testTimeout: 30000,
