@@ -9,6 +9,7 @@ import {
 } from "./middleware/security.middleware";
 import { tracingMiddleware } from "./middleware/tracing.middleware";
 import { requestLoggerMiddleware } from "./middleware/request-logger.middleware";
+import { requestTimeoutMiddleware } from "./middleware/request-timeout.middleware";
 import { distributedGeneralLimiter } from "./middleware/distributed-rate-limit.middleware";
 import { dbHealthMiddleware } from "./middleware/db-health.middleware";
 import { errorHandler } from "./middleware/errorHandler";
@@ -58,6 +59,7 @@ app.use(dbHealthMiddleware as any);
 app.use(securityMiddleware);
 app.use(corsMiddleware);
 app.use(requestLoggerMiddleware);
+app.use(requestTimeoutMiddleware());
 app.use(memoryMonitorMiddleware());
 startMemoryMonitoring();
 

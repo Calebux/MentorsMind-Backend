@@ -25,6 +25,11 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.string().regex(/^\d+$/, "PORT must be a number").default("5000"),
   API_VERSION: z.string().default("v1"),
+  /** Request timeout in ms before a middleware answers with 408 (issue #1114) */
+  REQUEST_TIMEOUT_MS: z
+    .string()
+    .regex(/^\d+$/, "REQUEST_TIMEOUT_MS must be a non-negative integer")
+    .default("30000"),
 
   // Database
   DATABASE_URL: z.string().url("DATABASE_URL must be a valid URL"),
