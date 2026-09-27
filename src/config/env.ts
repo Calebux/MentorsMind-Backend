@@ -20,6 +20,35 @@ dotenv.config({
 // ---------------------------------------------------------------------------
 const envSchema = z.object({
   // Server
+
+  // Multi-Region Overrides
+  REGION_US_EAST_1_DB_HOST: z.string().optional(),
+  REGION_US_EAST_1_DB_PORT: z.string().optional(),
+  REGION_US_EAST_1_POOL_SIZE: z.string().optional(),
+  REGION_US_EAST_1_REPLICA_1_HOST: z.string().optional(),
+  REGION_US_EAST_1_CACHE_HOST: z.string().optional(),
+  REGION_US_EAST_1_BROKER_HOST: z.string().optional(),
+
+  REGION_EU_WEST_1_DB_HOST: z.string().optional(),
+  REGION_EU_WEST_1_DB_PORT: z.string().optional(),
+  REGION_EU_WEST_1_POOL_SIZE: z.string().optional(),
+  REGION_EU_WEST_1_REPLICA_1_HOST: z.string().optional(),
+  REGION_EU_WEST_1_CACHE_HOST: z.string().optional(),
+  REGION_EU_WEST_1_BROKER_HOST: z.string().optional(),
+
+  REGION_AP_SOUTHEAST_1_DB_HOST: z.string().optional(),
+  REGION_AP_SOUTHEAST_1_DB_PORT: z.string().optional(),
+  REGION_AP_SOUTHEAST_1_POOL_SIZE: z.string().optional(),
+  REGION_AP_SOUTHEAST_1_REPLICA_1_HOST: z.string().optional(),
+  REGION_AP_SOUTHEAST_1_CACHE_HOST: z.string().optional(),
+  REGION_AP_SOUTHEAST_1_BROKER_HOST: z.string().optional(),
+  
+  MULTI_REGION_ENABLED: z.string().optional(),
+  PRIMARY_REGION: z.string().optional(),
+  ACTIVE_REGIONS: z.string().optional(),
+  OVERRIDE_REGION: z.string().optional(),
+  DB_SSL: z.string().optional(),
+
   NODE_ENV: z
     .enum(["development", "test", "production", "staging"])
     .default("development"),
@@ -286,6 +315,8 @@ const envSchema = z.object({
   ELASTICSEARCH_API_KEY: z.string().optional(),
   ELASTICSEARCH_ENABLED: z.enum(["true", "false"]).default("true"),
   ELASTICSEARCH_INDEX_PREFIX: z.string().default("mentorminds"),
+  ELASTICSEARCH_REQUEST_TIMEOUT_MS: z.string().regex(/^\d+$/).default("5000"),
+  HSTS_MAX_AGE: z.string().regex(/^\d+$/).default("31536000"),
   /** Max log documents to buffer before flushing to Elasticsearch */
   ELK_BATCH_SIZE: z.string().regex(/^\d+$/).default("100"),
   /** Flush interval in ms for the ELK batch transport */
